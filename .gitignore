@@ -1,0 +1,13 @@
+.env.*
+!.env.example
+.DS_Store
+__pycache__/
+.state/
+downloads/
+report.json
+ambiguous-records.csv
+unmatched-records.csv
+*.zip
+*.tar
+*.tar.gz
+*.tgz
