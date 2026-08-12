@@ -36,6 +36,24 @@ class ExtractJsonTests(unittest.TestCase):
                 [{"title": "Mother of the Bride", "watched_at": "2024-05-19T00:46:26Z"}],
             )
 
+    def test_extracts_google_tv_activity_and_excludes_ads_and_generic_media(self):
+        activity = """<div class="outer-cell mdl-cell mdl-cell--12-col mdl-shadow--2dp">
+        <div>Watched&nbsp;Last Action Hero<br>Aug 1, 2026, 9:59:59&#8239;AM EDT<br></div></div>
+        <div class="outer-cell mdl-cell mdl-cell--12-col mdl-shadow--2dp">
+        <div>Watched&nbsp;Media<br>Aug 2, 2026, 1:00:00&#8239;PM EDT<br></div></div>
+        <div class="outer-cell mdl-cell mdl-cell--12-col mdl-shadow--2dp">
+        <div>Watched&nbsp;1998<br>Aug 2, 2026, 1:30:00&#8239;PM EDT<br></div></div>
+        <div class="outer-cell mdl-cell mdl-cell--12-col mdl-shadow--2dp">
+        <div>Watched&nbsp;Some Ad<br>Aug 3, 2026, 1:00:00&#8239;PM EDT<br></div>
+        <div><b>Details:</b><br>From Google Ads<br></div></div>"""
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "MyActivity.html"
+            path.write_text(activity)
+            self.assertEqual(
+                import_watched.extract_google_tv_activity(path),
+                [{"title": "Last Action Hero", "watched_at": "2026-08-01T13:59:59Z"}],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -7,6 +7,7 @@ The importer:
 
 - reads `Search Contributions/Watched.json` from a Google Takeout ZIP, tarball,
   or extracted directory;
+- reads `My Activity/Google TV/MyActivity.html` from Google Takeout;
 - searches Trakt using the exported titles;
 - automatically accepts only unique exact-title matches;
 - puts ambiguous and unmatched records in `report.json` for review;
@@ -18,9 +19,13 @@ The importer:
 
 ## Important behavior
 
-When a Google record uniquely matches a Trakt TV show, committing the import
-marks every currently aired episode of that show as watched. This is how
-Trakt’s whole-show history endpoint works.
+For Search Contributions, a unique Trakt TV-show match is treated as a whole
+show and committing it marks every currently aired episode watched.
+
+Google TV My Activity names a show but does not identify the episode. To avoid
+marking an entire series accidentally, the Google TV activity workflow imports
+only exact movie matches. Exact show-title matches remain in the report for
+manual review.
 
 Ambiguous and unmatched records are not imported automatically. Review
 `report.json` before committing.
@@ -29,8 +34,8 @@ Ambiguous and unmatched records are not imported automatically. Review
 
 - Python 3.10 or newer; no third-party Python packages are required.
 - A Trakt account and a Trakt API application.
-- A Google Takeout archive containing **Search Contributions**, or an eligible
-  Google Data Portability API project.
+- A Google Takeout archive containing **Search Contributions** or **Google TV
+  My Activity**, or an eligible Google Data Portability API project.
 
 ## 1. Export your Google watched data
 
@@ -42,6 +47,12 @@ For most users:
 4. Create and download the export.
 
 The archive should contain `Search Contributions/Watched.json`.
+
+For Google TV activity, export **My Activity** and locate:
+
+```text
+Takeout/My Activity/Google TV/MyActivity.html
+```
 
 Google’s Data Portability API is available only in supported countries and
 regions. Google directs users elsewhere, including users with US-associated
@@ -72,6 +83,16 @@ This performs read-only Trakt searches and creates `report.json`. The summary
 shows the number of unique exact matches, ambiguous matches, and missing
 records. Inspect the report before continuing.
 
+For Google TV My Activity, run:
+
+```bash
+python3 import_watched.py \
+  --google-tv-activity ~/Downloads/Takeout/My\ Activity/Google\ TV/MyActivity.html
+```
+
+This creates `google-tv-report.json`. Ads, generic labels such as `Media`, and
+year-only labels are excluded so they cannot become false Trakt matches.
+
 ## 4. Commit exact matches to Trakt
 
 After reviewing the report:
@@ -85,7 +106,15 @@ access. The importer then skips existing watched titles and adds the remaining
 exact matches.
 
 Running the command again is safe: the importer reads your complete paginated
-Trakt watched state before sending changes.
+Trakt watched state and confirms apparent misses against direct movie history
+before sending changes. Expired Trakt access tokens are refreshed automatically.
+
+To commit a reviewed Google TV report directly (for example, if the Takeout
+file has been moved), run:
+
+```bash
+python3 import_watched.py --google-tv-report google-tv-report.json --commit
+```
 
 ## Optional: Google Data Portability API
 
@@ -125,6 +154,8 @@ are stored locally under `.state/`.
   Remakes and same-name media therefore require manual review.
 - Google may export episode titles. This version searches movies and shows, so
   those episode records can remain unmatched or require manual handling.
+- Google TV show activity has no episode number, so it is never imported as a
+  whole show automatically.
 - Google Takeout has occasionally emitted duplicate timestamps incorrectly
   encoded near January 1970. The importer repairs these timestamps and removes
   the damaged copy when a correct duplicate exists.
